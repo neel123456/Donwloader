@@ -22,12 +22,13 @@ class ytlist(object):
         for i in anchors:
             self.videos.append("https://youtube.com"+i['href'])
         #print(self.videos)
-
-    def downloadPlaylist(self):
-        for i in range(len(self.videos)):
+    def downloadPlaylist(self,start=0,end=-1,music=False):
+        if end==-1:
+            end=len(self.videos)
+        for i in range(start,end):
             print("ytlist:: Downloading %d of %d " % (i+1,len(self.videos)))
             current=ytvideo(self.videos[i])
-            current.download()
+            current.download(music)
             print("ytlist:: Completed downloading %d" %(i+1))
 
     

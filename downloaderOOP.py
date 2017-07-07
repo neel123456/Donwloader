@@ -14,7 +14,7 @@ class downloadUrl(object):
         self.tubeList=None
         self.headers=None
         self.frags=8
-        self.title=title
+        self.title=utils.removeSlash(title)
         self.length=None
         self.done=False
         self.percent=None
@@ -52,7 +52,7 @@ class downloadUrl(object):
                 self.byteAllow=True
             else:
                 self.byteAllow=False
-        elif response.status_code==302 or response.status_code==301:
+        elif response.status_code>300 and response.status_code<309:
             print(str(response.status_code)+" "+response.reason)
             print("Trying to follow redirection to %s"%(response.headers['Location']))
             self.url=response.headers['Location']
@@ -87,8 +87,11 @@ class downloadUrl(object):
         self.fragsize[num]=end-start+1
         if os.access(fname,os.F_OK):
             start+=os.stat(fname).st_size
-            assert start<end,"Looks like a problem to me start is greater than or equal to end. Cannot resume!"
-            print("Download will resume from %d" % start)
+            self.donesize[num]=os.stat(fname).st_size
+            assert start-1<=end,"Looks like a problem to me start is greater than or equal to end. Cannot resume!"
+            if start==end+1:
+                return;
+            print("Download for %d fragment will resume from %d" % (num,start))
         sendheaders={'Range':'bytes=%d-%d'%(start,end),'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'}
         connection=ur.Request(self.url,None,sendheaders)
 ##        connection.headers['Range']="bytes=%d-%d" % (start,end)
@@ -113,19 +116,22 @@ class downloadUrl(object):
         self.fraglist.append((0,int((self.length-1)*(float(1)/self.frags))));
         for i in range(1,self.frags):
             self.fraglist.append((self.fraglist[-1][1]+1,int((self.length-1)*(float(i+1)/self.frags))))    
-        print("Debug: "+str(self.fraglist))
+        ##print("Debug: "+str(self.fraglist))
         
     def downloadAllFrags(self):
-        self.setDefaultFraglist()
         if self.length==None:
             self.sendHead()
-##            self.setDefaultFraglist()
+            self.setDefaultFraglist()
         if self.length==False or self.byteAllow==False:
             print("Can not download by fragments.")
             print("Falling back to old download style.")
             self.downloadOld()
             return;
         else:
+            self.setDefaultFraglist()
+            if os.access(self.title,os.F_OK) and os.stat(self.title).st_size==self.length:
+                print("looks like file is downloaded already")
+                return;
             print("downloading "+'%.2f'%(self.length/(1024*1024.0))+" MB");
             threadlist=[]
             for i in range(self.frags):
@@ -140,15 +146,18 @@ class downloadUrl(object):
                 t.join()
             print()
             print("done downloading")
-            print("Starting to merge%d files"%(self.frags))
+            print("Starting to merge %d files"%(self.frags))
             utils.catAll(self.title,self.frags)
             print()
             
     def generateProgressBar(self):
+        sleepTime=0.5         ### in seconds(Using variable to manage speeds ###
+        prevDoneSize=0
         while True:
             #print(str(self.donesize)+str(self.fragsize))
-            utils.printProgressBar(sum(self.donesize)*100.0/self.length)
+            curDoneSize=sum(self.donesize)
+            utils.printProgressBar(curDoneSize*100.0/self.length,speed=(curDoneSize-prevDoneSize)/sleepTime/1024)
             if self.donesize==self.fragsize:
                 break
-            time.sleep(1)
-    
+            time.sleep(sleepTime)
+            prevDoneSize=curDoneSize
