@@ -10,8 +10,6 @@ class downloadUrl(object):
     def __init__(self,url,title=None):
         self.url=url
         self.byteAllow=None
-        self.isTube=None
-        self.tubeList=None
         self.headers=None
         self.frags=8
         self.title=utils.removeSlash(title)
@@ -41,7 +39,7 @@ class downloadUrl(object):
     def sendHead(self):
         print("sending Head request")
         response=requests.head(self.url)
-        if response.status_code==200:
+        if response.status_code==200 and 'Content-Length' in response.headers:
             print("OK 200")
             self.headers=response.headers
             self.length=int(self.headers['Content-Length'])
@@ -63,7 +61,7 @@ class downloadUrl(object):
             self.headers=response.headers
             self.length=False
     def downloadOld(self):
-        chunk=1*1024    ### Chunk size = 1 kilobyte ###
+        chunk=16*1024    ### Chunk size = 1 kilobyte ###
         ###  Prepare request
         sendheaders={'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'}
         reqst=ur.Request(self.url,headers=sendheaders)
@@ -98,7 +96,7 @@ class downloadUrl(object):
         
 ##        print("starting download for frag %d\n" % (num))
         down=ur.urlopen(connection)
-        chunk=1*1024
+        chunk=16*1024
         fp=open(self.title+".frag"+str(num),"ab")
         while(True):
             cnk=down.read(chunk);

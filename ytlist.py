@@ -2,20 +2,27 @@ import urllib.request as ur
 from bs4 import BeautifulSoup
 from ytvid import *
 class ytlist(object):
-    def __init__(self,url):
+    def __init__(self,url=None):
         self.url=url
         self.videos=[]
-        resp=ur.urlopen(url)
-        #print(resp.status)
-        if resp.status==200:
-            print("OK 200")
-            page=resp.read()
-        else:
-            print("FOUND %d" % (resp.status))
-            ## for now
-            exit(1)
-        #####       Getting List of Videos      #####
-        soup=BeautifulSoup(page,"html.parser")
+        if not url==None:    
+            resp=ur.urlopen(url)
+            #print(resp.status)
+            if resp.status==200:
+                print("OK 200")
+                page=resp.read()
+                self.page=page
+            else:
+                print("FOUND %d" % (resp.status))
+                ## for now
+                exit(1)
+            #####       Getting List of Videos      #####
+            
+
+    def setVideos(self,page=None):
+        if not page==None:
+            self.page=page
+        soup=BeautifulSoup(self.page,"html.parser")
         ##print(soup.prettify())
         #print(len(soup.find_all('a',class_="pl-video-title-link")))
         anchors=soup.find_all('a',class_="pl-video-title-link")
