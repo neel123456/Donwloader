@@ -20,6 +20,9 @@ class downloadUrl(object):
         self.fragsize=[-1 for i in range(self.frags)]
         self.donesize=[0 for i in range(self.frags)]
         self.skipmerge=False
+        self.running=True
+        self.chunk=16*1024
+        self.wait=15
         if not self.title:
             self.title=url.split('/')[-1]
             print("title set to "+self.title)
@@ -93,13 +96,13 @@ class downloadUrl(object):
 Cannot resume! start=%d end=%d num=%d" %(start,end,num)
             if start==end+1:
                 return;
-            print("Download for %d fragment will resume from %d" % (num,start),end='\r')
+            #print("Download for %d fragment will resume from %d" % (num,start),end='\r')
         print("starting download for %d frag " % num,end='\r')
         sendheaders={'Range':'bytes=%d-%d'%(start,end),'User-Agent':'Mozilla/5.0 \
 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'}
         connection=ur.Request(self.url,None,sendheaders)
         try:
-            down=ur.urlopen(connection)
+            down=ur.urlopen(connection,timeout=20)
         except:
             self.skipmerge=True;
             print("Error occured frag=%d"%num)
@@ -107,11 +110,13 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
         fp=open(self.title+".frag"+str(num),"ab")
         writer=threading.Thread(target=self.writeChunks,args=(fp,down,num))
         writer.start()
+        count=0
         while True:
             downloaded=self.donesize[num]
             if writer.is_alive():
-                time.sleep(15)       ## wait for something to change
-                if self.donesize[num]==downloaded:
+                time.sleep(1)
+                count+=1                ## wait for something to change
+                if count%self.wait==0 and self.donesize[num]==downloaded:
                     print("Closing file for non responsive fragment %d" % (num),end='\r')
                     fp.close()      ## Not responding actions..
                     ########    Testing...      ####### Segmentation Fault prone!
@@ -123,10 +128,9 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
         #print("finished download for frag %d\n" % (num))
 
     def writeChunks(self,f,connection,num):
-        chunk=1024
         try:
             while(True):
-                cnk=connection.read(chunk)
+                cnk=connection.read(self.chunk)
                 if not cnk:
                     break
                 f.write(cnk)
@@ -248,7 +252,7 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
         #print(self.fraglist)
         print(self.frags)
         
-    def bbdownload(self,frags=96):
+    def bbdownload(self,frags=64):
         if self.length==False or self.byteAllow==False:
             print("Can not download by fragments.")
             print("Falling back to old download style.")
@@ -262,13 +266,21 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
             print("downloading "+'%.2f'%(self.length/(1024*1024.0))+" MB");
             
             if self.length/(1024*1024.0) < 2:
-                self.setconstantfrags(64)           #64 KB fragments
+                self.setconstantfrags(64)
+                self.chunk=1*1024                   #64 KB fragments
             elif self.length/(1024*1024.0) < 16:
-                self.setconstantfrags(128)          #128KB fragments
+                self.setconstantfrags(64)          #128KB fragments
+                self.chunk=2*1024
             elif self.length/(1024*1024.0) < 32:
-                self.setconstantfrags(256)
+                self.setconstantfrags(128)
+                self.chunk=2*1024
+            elif self.length/(1024*1024.0) < 1024:
+                self.setconstantfrags(1024)
+                self.chunk=8*1024
             else:
-                self.setconstantfrags(512)         # 1MB fragments
+                self.setconstantfrags(10*1024)
+                self.chunk=16*1024
+                self.wait=20
             threadlist=[]
             #print(threading.active_count())
             nextFrag=0
@@ -291,8 +303,10 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
             print("done downloading")
             if self.skipmerge:
                 print("Can't merge...still have to download the DEAD")
+                self.running=False
                 return;
             print("Starting to merge %d files"%(self.frags))
+            self.running=False
             utils.catAll(self.title,self.frags)
             print()
 
@@ -301,6 +315,8 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
         prevDoneSize=0
         while True:
             #print(str(self.donesize)+str(self.fragsize))
+            if not self.running:
+                break;
             curDoneSize=sum(self.donesize)
             utils.printProgressBar(curDoneSize*100.0/self.length,speed=(curDoneSize-prevDoneSize)/sleepTime/1024)
             if self.donesize==self.fragsize:

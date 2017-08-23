@@ -25,6 +25,7 @@ class ytvideo(object):
     def download(self,music=False):
         if self.streamNumber:
             downurl=self.obj.allstreams[self.streamNumber].url
+            download=downloadUrl(downurl,self.title)
         else:
             downstream=self.obj.getbest()
             if music:
@@ -32,7 +33,5 @@ class ytvideo(object):
                 download=downloadUrl(downstream.url,downstream.title+"."+downstream.extension)
             else:
                 download=downloadUrl(downstream.url,downstream.title+"."+downstream.extension)
-        download.sendHead()
-        download.setDefaultFraglist()
-        download.downloadAllFrags()
+        download.bbdownload()
   
