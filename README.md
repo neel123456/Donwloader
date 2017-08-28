@@ -2,6 +2,6 @@
 
 ## Usage: python3 down.py <url>
 
-#Features
+## Features
 * Multi-threaded downloader
 * Resume facility
