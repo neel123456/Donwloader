@@ -23,6 +23,7 @@ class downloadUrl(object):
         self.running=True
         self.chunk=16*1024
         self.wait=15
+        self.tries=3
         if not self.title:
             self.title=url.split('/')[-1]
             print("title set to "+self.title)
@@ -85,7 +86,7 @@ class downloadUrl(object):
         print()
         print("done!")
 
-    def downloadFrag(self,start,end,num):
+    def downloadFrag(self,start,end,num,try_no):
         oldstart=start
         fname=self.title+".frag"+str(num)
         self.fragsize[num]=end-start+1
@@ -104,9 +105,13 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
         try:
             down=ur.urlopen(connection,timeout=20)
         except:
-            self.skipmerge=True;
-            print("Error occured frag=%d"%num)
-            return;
+            if try_no > 0:
+                self.downloadFrag(oldstart, end, num, try_no - 1)
+                return;
+            else:
+                self.skipmerge=True;
+                print("Error occured frag=%d"%num)
+                return -1;
         fp=open(self.title+".frag"+str(num),"ab")
         writer=threading.Thread(target=self.writeChunks,args=(fp,down,num))
         writer.start()
@@ -121,7 +126,7 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
                     fp.close()      ## Not responding actions..
                     ########    Testing...      ####### Segmentation Fault prone!
                     print("Restarting same frag",end='\r')
-                    self.downloadFrag(oldstart,end,num)
+                    self.downloadFrag(oldstart,end,num, try_no)
                     return -1;
             else:
                 break
@@ -290,7 +295,10 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
             while True:                             ## Change here...Bug: active count may be more than actual, The orphened connections.. 
                 ## count live count each time..
                 if threading.active_count()<1+frags:
-                    t=threading.Thread(target=self.downloadFrag,kwargs={'start':self.fraglist[nextFrag][0],'end':self.fraglist[nextFrag][1],'num':nextFrag})
+                    t=threading.Thread(target=self.downloadFrag,kwargs={'start':self.fraglist[nextFrag][0],\
+                                                                        'end':self.fraglist[nextFrag][1],\
+                                                                        'num':nextFrag,\
+                                                                        'try_no':self.tries})
                     t.start()
                     threadlist.append(t)
                     nextFrag+=1
