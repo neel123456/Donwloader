@@ -9,7 +9,7 @@ import utils
 class downloadUrl(object):
     def __init__(self,url,title=None):
         self.url=url
-        self.byteAllow=None
+        self.byteAllow=True
         self.headers=None
         self.frags=64
         self.title=utils.removeSlash(title)
@@ -53,10 +53,10 @@ class downloadUrl(object):
             print("length: "+str(self.length))
             assert self.length>0,"Something went wrong"
 
-            if self.headers['Accept-Ranges']=='bytes':
-                self.byteAllow=True
-            else:
-                self.byteAllow=False
+##            if self.headers['Accept-Ranges']=='bytes':
+##                self.byteAllow=True
+##            else:
+##                self.byteAllow=False
         elif response.status_code>300 and response.status_code<309:
             print(str(response.status_code)+" "+response.reason)
             print("Trying to follow redirection to %s"%(response.headers['Location']))
@@ -106,6 +106,10 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
         connection=ur.Request(self.url,None,sendheaders)
         try:
             down=ur.urlopen(connection,timeout=20)
+            if down.status != 206:
+                print("Server Does not support partial content", end = "\r")
+                self.skipmerge=True;
+                return;
         except:
             if try_no > 0:
                 self.downloadFrag(oldstart, end, num, try_no - 1)
