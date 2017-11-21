@@ -26,6 +26,8 @@ class downloadUrl(object):
         self.tries=3
         if not self.title:
             self.title=url.split('/')[-1]
+            if '?' in self.title:
+                self.title = self.title.split('?')[0]
             print("title set to "+self.title)
         if "youtube" in self.url or "youtu.be" in self.url:
             self.isTube=True
