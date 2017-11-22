@@ -230,6 +230,7 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
             threadlist=[]
             nextFrag=0
             progress=threading.Thread(target=self.generateProgressBar)
+            threadlist.append(progress)
             progress.start()
             while True:                             ## Change here...Bug: active count may be more than actual, The orphened connections.. 
                 ## count live count each time..
@@ -258,7 +259,7 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
             print()
 
     def generateProgressBar(self):
-        sleepTime=2         ### in seconds(Using variable to manage speeds ###
+        sleepTime=0.2         ### in seconds(Using variable to manage speeds ###
         prevDoneSize=0
         while True:
             #print(str(self.donesize)+str(self.fragsize))
