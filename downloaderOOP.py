@@ -21,24 +21,14 @@ class downloadUrl(object):
         self.donesize=[0 for i in range(self.frags)]
         self.skipmerge=False
         self.running=True
-        self.chunk=16*1024
-        self.wait=15
+        self.chunk=1*1024
+        self.wait=10
         self.tries=3
         if not self.title:
             self.title=url.split('/')[-1]
             if '?' in self.title:
                 self.title = self.title.split('?')[0]
             print("title set to "+self.title)
-        if "youtube" in self.url or "youtu.be" in self.url:
-            self.isTube=True
-        else:
-            self.isTube=False
-        
-
-    def setFrags(self,frags):
-        if frags<2 or frags>32:
-            print("WARNING: fragments must be between 2 to 32 defaulting to 5")    
-        self.frags=frags
         
     def __str__(self):
         return str("url: "+self.url)
@@ -59,7 +49,7 @@ class downloadUrl(object):
 ##                self.byteAllow=False
         elif response.status_code>300 and response.status_code<309:
             print(str(response.status_code)+" "+response.reason)
-            print("Trying to follow redirection to %s"%(response.headers['Location']))
+            print("following redirection")
             self.url=response.headers['Location']
             self.sendHead()
         else:
@@ -69,7 +59,7 @@ class downloadUrl(object):
             self.length=False
             
     def downloadOld(self):
-        chunk=16*1024    ### Chunk size = 1 kilobyte ###
+        chunk=16*1024    
         ###  Prepare request
         sendheaders={'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'}
         reqst=ur.Request(self.url,headers=sendheaders)
@@ -128,15 +118,13 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
                 time.sleep(1)
                 count+=1                ## wait for something to change
                 if count%self.wait==0 and self.donesize[num]==downloaded:
-                    print("Closing file for non responsive fragment %d" % (num),end='\r')
+                    #print("Closing file for non responsive fragment %d" % (num),end='\r')
                     fp.close()      ## Not responding actions..
-                    ########    Testing...      ####### Segmentation Fault prone!
                     print("Restarting same frag",end='\r')
                     self.downloadFrag(oldstart,end,num, try_no)
                     return -1;
             else:
                 break
-        #print("finished download for frag %d\n" % (num))
 
     def writeChunks(self,f,connection,num):
         try:
@@ -147,17 +135,8 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
                 f.write(cnk)
                 self.donesize[num]+=len(cnk)
         except:
-            print("Exiting from not responding connection",end='\r')
             return -1;  
         
-    def setDefaultFraglist(self):
-        assert (int(self.length>0)),"Your download file kinda sucks"
-        self.fraglist=[]
-        self.fraglist.append((0,int((self.length-1)*(float(1)/self.frags))));
-        for i in range(1,self.frags):
-            self.fraglist.append((self.fraglist[-1][1]+1,int((self.length-1)*(float(i+1)/self.frags))))    
-        ##print("Debug: "+str(self.fraglist))
-
     def setbbfraglist(self):
         if self.length==None:
             self.sendHead()
@@ -197,7 +176,19 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
         self.fragsize=[-1 for i in range(self.frags)]
         self.donesize=[0 for i in range(self.frags)]
         print(self.frags)
-        
+
+    def setFrags(self, frags = 32):
+        if self.length/(1024*1024.0) < 2:
+            self.setconstantfrags(64)
+        elif self.length/(1024*1024.0) < 16:
+            self.setconstantfrags(64)          #128KB fragments
+        elif self.length/(1024*1024.0) < 32:
+            self.setconstantfrags(128)
+        elif self.length/(1024*1024.0) < 1024:
+            self.setconstantfrags(1024)
+        else:
+            self.setconstantfrags(10*1024)
+            
     def bbdownload(self,frags=64):
         if self.length==False or self.byteAllow==False:
             print("Can not download by fragments.")
@@ -211,29 +202,14 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
                 return;
             print("downloading "+'%.2f'%(self.length/(1024*1024.0))+" MB");
             
-            if self.length/(1024*1024.0) < 2:
-                self.setconstantfrags(64)
-                self.chunk=1*1024                   #64 KB fragments
-            elif self.length/(1024*1024.0) < 16:
-                self.setconstantfrags(64)          #128KB fragments
-                self.chunk=2*1024
-            elif self.length/(1024*1024.0) < 32:
-                self.setconstantfrags(128)
-                self.chunk=2*1024
-            elif self.length/(1024*1024.0) < 1024:
-                self.setconstantfrags(1024)
-                self.chunk=8*1024
-            else:
-                self.setconstantfrags(10*1024)
-                self.chunk=16*1024
-                self.wait=20
+            self.setFrags();
+            self.wait=3
             threadlist=[]
             nextFrag=0
             progress=threading.Thread(target=self.generateProgressBar)
             threadlist.append(progress)
             progress.start()
             while True:                             ## Change here...Bug: active count may be more than actual, The orphened connections.. 
-                ## count live count each time..
                 if threading.active_count()<1+frags:
                     t=threading.Thread(target=self.downloadFrag,kwargs={'start':self.fraglist[nextFrag][0],\
                                                                         'end':self.fraglist[nextFrag][1],\
@@ -271,6 +247,3 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
                 break
             time.sleep(sleepTime)
             prevDoneSize=curDoneSize
-
-
-        
