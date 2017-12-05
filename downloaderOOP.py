@@ -22,7 +22,7 @@ class downloadUrl(object):
         self.skipmerge=False
         self.running=True
         self.chunk=1*1024
-        self.wait=1
+        self.wait=5
         self.tries=3
         if not self.title:
             self.title=url.split('/')[-1]
