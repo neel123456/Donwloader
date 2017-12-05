@@ -89,7 +89,6 @@ class downloadUrl(object):
 Cannot resume! start=%d end=%d num=%d" %(start,end,num)
             if start==end+1:
                 return;
-            #print("Download for %d fragment will resume from %d" % (num,start),end='\r')
         print("starting download for %d frag " % num,end='\r')
         sendheaders={'Range':'bytes=%d-%d'%(start,end),'User-Agent':'Mozilla/5.0 \
 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'}
@@ -118,11 +117,9 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
                 time.sleep(1)
                 count+=1                ## wait for something to change
                 if count%self.wait==0 and self.donesize[num]==downloaded:
-                    #print("Closing file for non responsive fragment %d" % (num),end='\r')
-                    fp.close()      ## Not responding actions..
-                    print("Restarting same frag",end='\r')
+                    fp.close()     
                     self.downloadFrag(oldstart,end,num, try_no)
-                    return -1;
+                    break
             else:
                 break
 
@@ -207,7 +204,7 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
             threadlist=[]
             nextFrag=0
             progress=threading.Thread(target=self.generateProgressBar)
-            threadlist.append(progress)
+            #threadlist.append(progress)
             progress.start()
             while True:                             ## Change here...Bug: active count may be more than actual, The orphened connections.. 
                 if threading.active_count()<1+frags:
@@ -223,7 +220,7 @@ Cannot resume! start=%d end=%d num=%d" %(start,end,num)
                         break
             for i in threadlist:
                 i.join()
-            print()
+            self.done = True;
             print("done downloading")
             if self.skipmerge:
                 print("Can't merge...still have to download the DEAD")

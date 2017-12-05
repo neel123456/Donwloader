@@ -1,4 +1,4 @@
-from downloaderOOP import *
+from ytlist import *
 import sys,os,time
 def lookupArg(name):
 	try:
@@ -8,10 +8,21 @@ def lookupArg(name):
 	return sys.argv[place + 1]
 
 
-url = sys.argv[1]
-down = downloadUrl(url)
-name = lookupArg("name")
-if name != -1:
-	down.title = name
-down.bbdownload();
+arg1 = sys.argv[1]
+if arg1 == "--file":
+	f = open(sys.argv[2])
+	urls = f.read().split('\n')
+	cnt = 0
+	for url in urls:
+		if "youtube" in url:
+			vid = ytvideo(url)
+			vid.download()
+		else:
+			down = downloadUrl(url)
+			down.bbdownload()
+		cnt += 1
+		print(cnt)
+else:
+	down = downloadUrl(arg1)
+	down.bbdownload()
 
