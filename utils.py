@@ -53,7 +53,7 @@ def catAll(title,num):
     fp.close()
     print("Done Merging the fragments")
     for i in range(num):
-        os.remove(title+".frag"+str(i))
+        os.remove("." + title+".frag"+str(i))
     print("Removed the fragments!")
 
 def removeSlash(title):
