@@ -46,7 +46,7 @@ def fragProgress(title,num,expected):
 def catAll(title,num):
     fp=open(title,"wb")
     for i in range(num):
-        ftemp=open(title+".frag"+str(i),"rb")
+        ftemp=open("." + title + ".frag" + str(i),"rb")
         fragdata=ftemp.read()
         fp.write(fragdata)
         ftemp.close()

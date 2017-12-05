@@ -22,7 +22,7 @@ class downloadUrl(object):
         self.skipmerge=False
         self.running=True
         self.chunk=1*1024
-        self.wait=5
+        self.wait=7
         self.tries=3
         if not self.title:
             self.title=url.split('/')[-1]
@@ -80,7 +80,7 @@ class downloadUrl(object):
 
     def downloadFrag(self,start,end,num,try_no):
         oldstart=start
-        fname=self.title+".frag"+str(num)
+        fname="." + self.title + ".frag" + str(num)
         self.fragsize[num]=end-start+1
         while True:
             start = oldstart
@@ -108,7 +108,7 @@ class downloadUrl(object):
                     self.skipmerge=True;
                     print("Error occured frag=%d"%num)
                     return -1;
-            fp=open(self.title+".frag"+str(num),"ab")
+            fp=open(fname,"ab")
             writer=threading.Thread(target=self.writeChunks,args=(fp,down,num))
             writer.start()
             count=0
