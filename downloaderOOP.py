@@ -22,7 +22,7 @@ class downloadUrl(object):
         self.skipmerge=False
         self.running=True
         self.chunk=1*1024
-        self.wait=10
+        self.wait=1
         self.tries=3
         if not self.title:
             self.title=url.split('/')[-1]
@@ -82,47 +82,47 @@ class downloadUrl(object):
         oldstart=start
         fname=self.title+".frag"+str(num)
         self.fragsize[num]=end-start+1
-        if os.access(fname,os.F_OK):
-            start+=os.stat(fname).st_size
-            self.donesize[num]=os.stat(fname).st_size
-            assert start-1<=end,"Looks like a problem to me start is greater than or equal to end. \
-Cannot resume! start=%d end=%d num=%d" %(start,end,num)
-            if start==end+1:
-                return;
-        print("starting download for %d frag " % num,end='\r')
-        sendheaders={'Range':'bytes=%d-%d'%(start,end),'User-Agent':'Mozilla/5.0 \
-(Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'}
-        connection=ur.Request(self.url,None,sendheaders)
-        try:
-            down=ur.urlopen(connection,timeout=20)
-            if down.status != 206:
-                print("Server Does not support partial content", end = "\r")
-                self.skipmerge=True;
-                return;
-        except:
-            if try_no > 0:
-                self.downloadFrag(oldstart, end, num, try_no - 1)
-                return;
-            else:
-                self.skipmerge=True;
-                print("Error occured frag=%d"%num)
-                return -1;
-        fp=open(self.title+".frag"+str(num),"ab")
-        writer=threading.Thread(target=self.writeChunks,args=(fp,down,num))
-        writer.start()
-        count=0
         while True:
-            downloaded=self.donesize[num]
-            if writer.is_alive():
-                time.sleep(1)
-                count+=1                ## wait for something to change
-                if count%self.wait==0 and self.donesize[num]==downloaded:
-                    fp.close()     
-                    self.downloadFrag(oldstart,end,num, try_no)
-                    break
-            else:
-                break
-
+            start = oldstart
+            if os.access(fname,os.F_OK):
+                start+=os.stat(fname).st_size
+                self.donesize[num]=os.stat(fname).st_size
+                assert start-1<=end,"Cannot resume! start=%d end=%d num=%d" %(start,end,num)
+                if start==end+1:
+                    return;
+            print("starting download for %d frag " % num,end='\r')
+            sendheaders={'Range':'bytes=%d-%d'%(start,end),'User-Agent':'Mozilla/5.0 \
+    (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'}
+            connection=ur.Request(self.url,None,sendheaders)
+            try:
+                down=ur.urlopen(connection,timeout=20)
+                if down.status != 206:
+                    print("Server Does not support partial content", end = "\r")
+                    self.skipmerge=True;
+                    return;
+            except:
+                if try_no > 0:
+                    self.downloadFrag(oldstart, end, num, try_no - 1)
+                    return;
+                else:
+                    self.skipmerge=True;
+                    print("Error occured frag=%d"%num)
+                    return -1;
+            fp=open(self.title+".frag"+str(num),"ab")
+            writer=threading.Thread(target=self.writeChunks,args=(fp,down,num))
+            writer.start()
+            count=0
+            while True:
+                downloaded=self.donesize[num]
+                if writer.is_alive():
+                    time.sleep(1)
+                    count+=1                ## wait for something to change
+                    if count%self.wait==0 and self.donesize[num]==downloaded:
+                        fp.close()     
+                        break
+                else:
+                    return
+        
     def writeChunks(self,f,connection,num):
         try:
             while(True):
