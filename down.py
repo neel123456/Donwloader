@@ -12,8 +12,12 @@ arg1 = sys.argv[1]
 if arg1 == "--file":
 	f = open(sys.argv[2])
 	urls = f.read().split('\n')
+	urls = list(set(urls))
+	print(len(urls))
 	cnt = 0
 	for url in urls:
+		if url=='':
+			continue
 		if "youtube" in url:
 			vid = ytvideo(url)
 			vid.download()

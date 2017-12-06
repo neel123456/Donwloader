@@ -22,7 +22,7 @@ class downloadUrl(object):
         self.skipmerge=False
         self.running=True
         self.chunk=1*1024
-        self.wait=7
+        self.wait=5
         self.tries=3
         if not self.title:
             self.title=url.split('/')[-1]
@@ -40,7 +40,7 @@ class downloadUrl(object):
             print("OK 200")
             self.headers=response.headers
             self.length=int(self.headers['Content-Length'])
-            print("length: "+str(self.length))
+            print("length: "+str(self.length) + " " + str(self.length / 1024 / 1024) + "MB")
             assert self.length>0,"Something went wrong"
 
 ##            if self.headers['Accept-Ranges']=='bytes':
@@ -134,25 +134,6 @@ class downloadUrl(object):
         except:
             return -1;  
         
-    def setbbfraglist(self):
-        if self.length==None:
-            self.sendHead()
-        self.fraglist=[]
-        MB=1024*1024
-        first=0
-        last=MB-1
-        cnt=0
-        while first<=self.length-1:
-            if last>self.length-1:
-                last=self.length-1
-            self.fraglist.append((first,last))
-            first=last+1
-            last=first+MB-1
-            cnt+=1
-        self.frags=cnt
-        self.fragsize=[-1 for i in range(self.frags)]
-        self.donesize=[0 for i in range(self.frags)]
-        print(self.frags)
 
     def setconstantfrags(self,kbs):
         if self.length==None:
@@ -175,18 +156,14 @@ class downloadUrl(object):
         print(self.frags)
 
     def setFrags(self, frags = 32):
-        if self.length/(1024*1024.0) < 2:
-            self.setconstantfrags(64)
-        elif self.length/(1024*1024.0) < 16:
-            self.setconstantfrags(64)          #128KB fragments
-        elif self.length/(1024*1024.0) < 32:
-            self.setconstantfrags(128)
+        if self.length/(1024*1024.0) < 32:
+            self.setconstantfrags(256)
         elif self.length/(1024*1024.0) < 1024:
-            self.setconstantfrags(1024)
+            self.setconstantfrags(256)
         else:
             self.setconstantfrags(10*1024)
             
-    def bbdownload(self,frags=64):
+    def bbdownload(self,frags=96):
         if self.length==False or self.byteAllow==False:
             print("Can not download by fragments.")
             print("Falling back to old download style.")
@@ -204,7 +181,7 @@ class downloadUrl(object):
             threadlist=[]
             nextFrag=0
             progress=threading.Thread(target=self.generateProgressBar)
-            #threadlist.append(progress)
+            threadlist.append(progress)
             progress.start()
             while True:                             ## Change here...Bug: active count may be more than actual, The orphened connections.. 
                 if threading.active_count()<1+frags:
@@ -235,7 +212,6 @@ class downloadUrl(object):
         sleepTime=0.2         ### in seconds(Using variable to manage speeds ###
         prevDoneSize=0
         while True:
-            #print(str(self.donesize)+str(self.fragsize))
             if not self.running:
                 break;
             curDoneSize=sum(self.donesize)
